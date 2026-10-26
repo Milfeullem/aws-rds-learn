@@ -1,4 +1,4 @@
-# React Mid-Level — 30 Questions (English)
+# React Mid-Level — 31 Questions (English)
 
 Interview-ready answers with a bit more depth than a pure 30-second pitch. Lead with the short verdict, then add the “why / how / edge case.” Tie each answer to code you’ve practiced when you can.
 
@@ -348,7 +348,7 @@ Practice map: AsyncSearch · InfiniteScroll · NestedComments · Autocomplete ·
 
 ---
 
-## F. Performance, Architecture & Trade-offs (28–30)
+## F. Performance, Architecture & Trade-offs (28–31)
 
 ### 28. How do you approach React performance in an interview?
 
@@ -385,6 +385,36 @@ Practice map: AsyncSearch · InfiniteScroll · NestedComments · Autocomplete ·
 >
 > You don’t need Fiber lane internals for mid-level—know the mental model and how keys/state fit in.
 
+### 31. Local vs lifted vs global state — and server vs client state?
+
+> **Short:** Start local; lift to the nearest common parent when siblings must share; introduce global (Context / Zustand) only when many distant trees need the same client state. Keep **server state** in a cache library (React Query / SWR), not in ad-hoc `useState` + Context. Cache keys and invalidation are what keep the UI honest after mutations.
+>
+> **Client-state ladder (UI / session):**
+> 1. **Local `useState` / `useReducer`** — owned by one interaction: input draft, modal open, “reply form for this id,” hover. Default choice (Todo item edit draft, NestedComments reply UI).
+> 2. **Lifted state** — nearest common parent when two+ children read/write the same data and prop-drill is still shallow (todo list at `App`, comment tree + `collapsedIds` at root). Prefer this over Context until the tree gets awkward.
+> 3. **Context** — cross-cutting client concerns that would otherwise drill through many layers: theme, locale, current user session, feature flags. Keep the `value` stable; split providers so a frequent update (e.g. cart count) doesn’t re-render the whole app. Context is a dependency-injection / broadcast tool, **not** a server cache.
+> 4. **Zustand (or similar store)** — when you want global client state without Provider nesting, or frequent updates that would thrash Context consumers. Good for UI shells, wizards, client-only carts. Still don’t dump fetched lists here unless you’ve consciously chosen “manual cache.”
+>
+> **Smell → escalate:** prop-drilling the same bag through 4+ unrelated layers; the same client flag read in distant routes; updating one boolean re-rendering a huge unrelated tree (then split Context or use a store with selectors).
+>
+> **Server state vs client state:**
+> | | **Client state** | **Server state** |
+> |--|------------------|------------------|
+> | Source of truth | The browser session | The backend / DB |
+> | Examples | `isModalOpen`, selected tab, draft text, theme | Products, feed pages, user profile, comments from API |
+> | Freshness | You control it | Can be stale, shared, paginated; others can change it |
+> | Typical tools | `useState`, Context, Zustand | React Query, SWR, RTK Query |
+>
+> Mixing them (fetch → put array in Zustand → hand-sync after every POST) recreates a buggy cache. AsyncSearch / Infinite Scroll status + results are server-shaped data; in an app you’d key them in React Query instead of only local state.
+>
+> **Why cache + invalidation matter:**
+> - **Cache** — dedupe in-flight requests, reuse data across components/routes, enable stale-while-revalidate so navigation feels instant.
+> - **Cache keys** — encode what the data *is* (`['todos']`, `['feed', cursor, filter]`). Wrong keys → wrong data or useless refetch.
+> - **Invalidation** — after create/update/delete, mark related queries stale (or optimistic-update then reconcile). Without it: list page shows old rows, detail shows new entity, infinite scroll keeps a ghost page.
+> - **Filter / query change** — reset or swap keys (new filter ⇒ new cache entry or explicit reset); same race mindset as bumping `requestId` in AsyncSearch.
+>
+> **Line to say:** “Ephemeral UI stays local; shared UI lifts or goes to Context/Zustand; anything from the network is server state with a keyed cache and invalidation after mutations—I wouldn’t reinvent that with Context.”
+
 ---
 
 ## Quick drill (pick 5 before a call)
@@ -394,6 +424,7 @@ Practice map: AsyncSearch · InfiniteScroll · NestedComments · Autocomplete ·
 3. Controlled vs uncontrolled  
 4. Infinite scroll vs virtualization  
 5. Tree immutable update + where UI state lives  
+6. Local / lifted / global + server vs client state  
 
 ---
 
@@ -409,3 +440,4 @@ Practice map: AsyncSearch · InfiniteScroll · NestedComments · Autocomplete ·
 | ARIA tabs | Tabs |
 | State colocation | TodoList |
 | Flatten + virtual window | FileExplorer |
+| Client ladder + server cache | Q6 + Q29 + Q31 |
