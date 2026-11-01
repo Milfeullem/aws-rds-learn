@@ -1,3 +1,3 @@
-import App from './components/DragDropKanban/App'
+import App from './components/CustomHooks/App'
 
 export default App
